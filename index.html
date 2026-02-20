@@ -1,0 +1,220 @@
+<!-- START OF FILE index.html -->
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>প্রবাসী সেবা রহিম</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; margin: 0; padding: 0; background-color: #f4f7f6; padding-bottom: 80px; -webkit-tap-highlight-color: transparent; }
+        .header { background: linear-gradient(135deg, #006a4e, #00b140); color: white; padding: 20px; border-bottom-left-radius: 25px; border-bottom-right-radius: 25px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .app-name { font-size: 24px; font-weight: bold; }
+        .date-display { font-size: 13px; opacity: 0.9; margin-top: 5px; }
+
+        .page-section { display: none; padding: 15px; animation: fadeIn 0.3s; }
+        .page-section.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .highlight-box { background: white; border-radius: 15px; padding: 20px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-top: -30px; margin-bottom: 20px; position: relative; z-index: 10; }
+        .live-rate { font-size: 28px; font-weight: bold; color: #006a4e; }
+
+        /* বড় আইকন স্টাইল */
+        .grid-container { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; }
+        .service-card { 
+            background: white; border-radius: 16px; padding: 15px; 
+            text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.08); 
+            text-decoration: none; color: #333; transition: transform 0.2s; 
+            display: flex; flex-direction: column; align-items: center; 
+            height: 140px; justify-content: center; cursor: pointer;
+        }
+        .service-card:active { transform: scale(0.95); background: #f0fdf4; }
+        .service-icon { 
+            width: 80px; height: 80px; object-fit: cover; 
+            margin-bottom: 10px; border-radius: 12px;
+        }
+        .service-title { font-size: 15px; font-weight: 700; line-height: 1.2; }
+
+        .bottom-nav { position: fixed; bottom: 0; width: 100%; background: white; display: flex; justify-content: space-around; padding: 10px 0; box-shadow: 0 -2px 10px rgba(0,0,0,0.05); z-index: 1000; border-top-left-radius: 20px; border-top-right-radius: 20px; }
+        .nav-item { text-align: center; color: #999; text-decoration: none; font-size: 12px; flex: 1; cursor: pointer; }
+        .nav-item i { font-size: 20px; display: block; margin-bottom: 4px; }
+        .nav-item.active { color: #006a4e; font-weight: bold; }
+
+        /* লোডিং পপ-আপ ডিজাইন */
+        .ad-modal {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85); z-index: 9999; flex-direction: column; align-items: center; justify-content: center; color: white;
+        }
+        .spinner {
+            border: 5px solid #f3f3f3; border-top: 5px solid #00b140; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin-bottom: 20px;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .timer-text { font-size: 18px; margin-bottom: 10px; }
+        .status-text { font-size: 14px; color: #ccc; }
+        
+        .calc-input { width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 8px; }
+        .calc-result { background: #e8f5e9; padding: 15px; border-radius: 8px; font-weight: bold; color: green; margin-top: 5px; }
+
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <div class="app-name">প্রবাসী সেবা রহিম</div>
+        <div class="date-display" id="currentDate">লোডিং...</div>
+    </div>
+
+    <!-- হোম পেজ -->
+    <div id="home-page" class="page-section active">
+        <div class="highlight-box">
+            <div class="rate-label">আজকের টাকার রেট (BD)</div>
+            <div class="live-rate" id="displayRateBD">...</div>
+            <small style="color:#888;">১ সৌদি রিয়াল = <span id="smallRate">...</span> টাকা</small>
+        </div>
+        <h3 style="margin-bottom:10px; color:#444;">জনপ্রিয় সেবা</h3>
+        <div class="grid-container" id="featuredServices">
+            <div style="text-align:center; grid-column:span 2;">লোডিং...</div>
+        </div>
+    </div>
+
+    <!-- সকল সেবা পেজ -->
+    <div id="services-page" class="page-section">
+        <h3 style="margin-bottom:15px; color:#444; text-align:center;">সকল প্রবাসী সেবা</h3>
+        <div class="grid-container" id="allServices"></div>
+    </div>
+
+    <!-- রেট চেক পেজ -->
+    <div id="calculator-page" class="page-section">
+        <div class="highlight-box" style="margin-top:0;">
+            <h3>🧮 কারেন্সি কনভার্টার</h3>
+            <input type="number" id="calcInput" class="calc-input" placeholder="রিয়াল" oninput="calculate()">
+            <select id="countrySelect" class="calc-input" onchange="calculate()">
+                <option value="BD">🇧🇩 বাংলাদেশ</option>
+                <option value="IN">🇮🇳 ইন্ডিয়া</option>
+            </select>
+            <div class="calc-result" id="calcResult">0.00 টাকা</div>
+        </div>
+    </div>
+
+    <div class="bottom-nav">
+        <div class="nav-item active" onclick="switchTab('home-page', this)"><i class="fas fa-home"></i> হোম</div>
+        <div class="nav-item" onclick="switchTab('services-page', this)"><i class="fas fa-th-large"></i> সকল সেবা</div>
+        <div class="nav-item" onclick="switchTab('calculator-page', this)"><i class="fas fa-calculator"></i> রেট চেক</div>
+    </div>
+
+    <!-- লোডিং মডেল (অ্যাড প্রসেসিং) -->
+    <div id="processingModal" class="ad-modal">
+        <div class="spinner"></div>
+        <div id="timerDisplay" class="timer-text">অপেক্ষা করুন: ৫ সেকেন্ড</div>
+        <div class="status-text">সার্ভিস পেজ লোড হচ্ছে...</div>
+    </div>
+
+    <script>
+        const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+        document.getElementById('currentDate').innerText = new Date().toLocaleDateString('bn-BD', dateOptions);
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDJyPU2unY1ritu_GKKIbyWUdMGLn0E208",
+            authDomain: "md-abdur-90128.firebaseapp.com",
+            databaseURL: "https://md-abdur-90128-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "md-abdur-90128",
+            storageBucket: "md-abdur-90128.firebasestorage.app",
+            messagingSenderId: "569558327881",
+            appId: "1:569558327881:web:f1d7d75a680f032bad5598"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        let currentRates = { BD: 0, IN: 0 };
+        let monetizationLink = ""; // অ্যাড লিংক
+
+        // ১. অ্যাড লিংক লোড
+        db.ref('settings/adLink').on('value', (snapshot) => {
+            if(snapshot.exists()) {
+                monetizationLink = snapshot.val();
+            }
+        });
+
+        // রেট লোড
+        db.ref('rates').on('value', (snapshot) => {
+            const data = snapshot.val();
+            if(data) {
+                currentRates.BD = parseFloat(data.BD);
+                currentRates.IN = parseFloat(data.IN);
+                document.getElementById('displayRateBD').innerText = "৳ " + currentRates.BD;
+                document.getElementById('smallRate').innerText = currentRates.BD;
+                calculate();
+            }
+        });
+
+        // ২. সার্ভিস লোড (ক্লিক ইভেন্ট আপডেট)
+        db.ref('services').on('value', (snapshot) => {
+            const homeGrid = document.getElementById('featuredServices');
+            const allGrid = document.getElementById('allServices');
+            homeGrid.innerHTML = ""; allGrid.innerHTML = "";
+            let count = 0;
+            snapshot.forEach((child) => {
+                const item = child.val();
+                const cardHtml = `
+                    <div class="service-card" onclick="handleServiceClick('${item.link}')">
+                        <img src="${item.icon}" class="service-icon" alt="icon" onerror="this.src='https://cdn-icons-png.flaticon.com/512/2921/2921226.png'">
+                        <div class="service-title">${item.title}</div>
+                    </div>
+                `;
+                allGrid.innerHTML += cardHtml;
+                if(count < 6) homeGrid.innerHTML += cardHtml;
+                count++;
+            });
+            if(count === 0) homeGrid.innerHTML = "<p>সার্ভিস লোড হচ্ছে...</p>";
+        });
+
+        // ৩. অ্যাড হ্যান্ডেলিং লজিক (নিরাপদ পদ্ধতি)
+        function handleServiceClick(targetUrl) {
+            // যদি অ্যাডমিনে কোনো লিংক না দেওয়া থাকে, সরাসরি সার্ভিস ওপেন হবে
+            if(!monetizationLink || monetizationLink === "") {
+                window.location.href = targetUrl;
+                return;
+            }
+
+            // অ্যাড নতুন ট্যাবে ওপেন হবে
+            window.open(monetizationLink, '_blank');
+
+            // ইউজার অ্যাপে লোডিং দেখাবে
+            const modal = document.getElementById('processingModal');
+            const timerTxt = document.getElementById('timerDisplay');
+            modal.style.display = 'flex';
+            
+            let timeLeft = 5; // ৫ সেকেন্ড অপেক্ষা
+            timerTxt.innerText = `অপেক্ষা করুন: ${timeLeft} সেকেন্ড`;
+
+            const timer = setInterval(() => {
+                timeLeft--;
+                timerTxt.innerText = `অপেক্ষা করুন: ${timeLeft} সেকেন্ড`;
+                
+                if(timeLeft <= 0) {
+                    clearInterval(timer);
+                    modal.style.display = 'none'; // মডেল বন্ধ
+                    window.location.href = targetUrl; // আসল সার্ভিস চালু
+                }
+            }, 1000);
+        }
+
+        // ক্যালকুলেটর ও ট্যাব ফাংশন
+        function calculate() {
+            let amount = parseFloat(document.getElementById('calcInput').value) || 0;
+            let country = document.getElementById('countrySelect').value;
+            let rate = (country === 'BD') ? currentRates.BD : currentRates.IN;
+            document.getElementById('calcResult').innerText = (amount * rate).toFixed(2) + " " + ((country==='BD')?"টাকা":"রুপি");
+        }
+        function switchTab(tabId, navElement) {
+            document.querySelectorAll('.page-section').forEach(section => section.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+            navElement.classList.add('active');
+        }
+    </script>
+</body>
+</html>
